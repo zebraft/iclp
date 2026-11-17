@@ -23,7 +23,7 @@ Run `python scripts/check-public-source.py` before committing. Keep build output
 
 ## Colleague changes and Git
 
-Occasional batched snapshot commits are fine for this repository. Collect code and skill changes, review the diff, run the privacy scan and relevant tests, then commit and push. Branches and pull requests are optional for small maintenance batches. The included CI runs privacy-pattern checks, application tests, type checks and builds. It does not deploy sites or read private runtime data.
+Occasional batched snapshot commits are fine for this repository. Collect code and skill changes, review the diff, run the privacy scan and relevant tests, then commit and push. Branches and pull requests are optional for small maintenance batches. The optional manual GitHub Actions workflow runs privacy-pattern checks, application tests, type checks and builds when started from the Actions tab. Local checks remain available before each batched commit. It does not deploy sites or read private runtime data.
 
 Changes made only in the deployed Sites editor, ChatGPT's cloud skill editor, Google Sheets or the Google Apps Script editor do not synchronize back to GitHub. Deploy reviewed code from the repository, and explicitly update the deployed Apps Script and cloud skill from that version. Sheets selections, feedback, profiles and other operational records remain private runtime data and must not be committed.
 
