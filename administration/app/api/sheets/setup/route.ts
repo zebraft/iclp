@@ -1,0 +1,5 @@
+import {googleStatus,configureGoogle,configureAppsScript,retryPending} from '../../../../lib/sheet-sync';
+import {requireLibraryAdmin} from '../../../../lib/credentials';
+import {userId,sameOrigin,json} from '../../../../lib/service';
+export async function GET(req:Request){try{await requireLibraryAdmin(userId(req));return json(await googleStatus());}catch{return json({error:'僅限圖書館管理員 / Library administrator only'},403);}}
+export async function POST(req:Request){try{const uid=userId(req);sameOrigin(req);await requireLibraryAdmin(uid);const text=await req.text();if(text.length>20000)return json({error:'內容過長 / Request too large'},413);const data=JSON.parse(text);if(data.action==='retry')return json({results:await retryPending(uid)});const connection=data.provider==='apps-script'?await configureAppsScript(uid,data.url,data.secret,data.workbookUrl):await configureGoogle(uid,data.key,data.workbookUrl);return json({...connection,pendingResponses:await retryPending(uid)});}catch(e){const m=e instanceof Error?e.message:'';return json({error:/^(Google|請上傳|試算表連結)/.test(m)?m:'連線未完成，請檢查權限 / Connection incomplete; check permissions'},400);}}

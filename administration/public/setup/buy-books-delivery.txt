@@ -1,0 +1,19 @@
+薦購網頁回覆：Google 試算表交付 / Checklist response delivery
+
+先呼叫 recommendation_delivery_status。只有 automaticWorkbookWrites=true 且 connectionHealthy=true 時，才能表示已啟用自動交付。設定入口：/sheets/setup。
+Call recommendation_delivery_status first. Claim automatic delivery only when automaticWorkbookWrites and connectionHealthy are true. Setup: /sheets/setup.
+
+優先使用管理員在既有共用試算表建立的 Apps Script；不要求服務帳戶。管理員完成一次性 Google 授權與部署；連線碼只能貼入私人設定頁，不得貼到聊天。不得變更試算表分享權限或代用其他 Google 帳戶。
+Prefer an Apps Script bound to the existing staff workbook. No service account is required. The administrator authorizes and deploys it once. Enter the connection code only in the private setup form, never in chat. Do not change workbook sharing or substitute another Google account.
+
+送出時先保存不可變回覆，再直接更新研究者頁籤、Replies 及 Buyer queue。讀回核對後才標記已同步；回覆不是訂單。
+Submission saves an immutable response, then updates the researcher tab, Replies and Buyer queue. Mark synchronized only after readback. A recommendation is not an order.
+
+setUp 會建立每五分鐘重試工作，每次最多五個最新待處理回覆。automaticRetryTriggerInstalled 只表示已安裝；lastRetryAt 才是觀察到的執行時間。這是故障復原，不是每小時代理輪詢。
+setUp installs a five-minute retry for up to five latest pending responses per run. automaticRetryTriggerInstalled proves installation; lastRetryAt reports an observed call. This is failure recovery, not hourly agent polling.
+
+get_recommendation_responses 用於查核及故障復原。已同步回覆不得重複新增。以最新修訂為準，保留歷史；不得以舊待處理回覆覆蓋新選擇。未同步或讀回失敗仍為 pending。
+Use get_recommendation_responses for inspection and recovery. Do not append already synchronized responses again. Apply the latest revision and preserve history; never overwrite it with an older pending revision. Failed writes or readback remain pending.
+
+回覆與偏好、意見分開；寄信及採購交接仍受原有授權限制。
+Keep selections, preferences and feedback separate. Existing email and purchaser-handoff authorization remains required.

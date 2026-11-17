@@ -1,0 +1,7 @@
+import {directSync} from '../../../../lib/sheet-sync';
+import {env} from 'cloudflare:workers';
+import {readReview,submitReview,ReviewError} from '../../../../lib/recommendations.mjs';
+import {sameOrigin,json} from '../../../../lib/service';
+const token=(req:Request)=>req.headers.get('X-Review-Token')||'';
+export async function GET(req:Request,context:{params:Promise<{id:string}>}){try{return json(await readReview(env.DB,(await context.params).id,token(req)));}catch(e){return json({error:e instanceof ReviewError?e.message:'查詢未完成 / Unable to load'},e instanceof ReviewError?e.status:401);}}
+export async function POST(req:Request,context:{params:Promise<{id:string}>}){try{const uid=req.headers.get('oai-authenticated-user-id')||'personal-link';sameOrigin(req);if(Number(req.headers.get('content-length')||0)>24000)return json({error:'內容過長 / Request too large'},413);const text=await req.text();if(text.length>24000)return json({error:'內容過長 / Request too large'},413);const data=JSON.parse(text),id=(await context.params).id;let result;if(data.retrySync===true){const issue=await readReview(env.DB,id,token(req));if(!issue.latest||issue.latest.id!==data.responseId)throw new ReviewError('回覆編號不符 / Response mismatch');result=issue.latest;}else result=await submitReview(env.DB,id,token(req),data,uid);const sync=await directSync(result.id);return json({...result,workbookSynced:sync.synced,syncReason:sync.reason||null});}catch(e){return json({error:e instanceof ReviewError?e.message:'送出未完成，請重試 / Submission incomplete; retry'},e instanceof ReviewError?e.status:400);}}

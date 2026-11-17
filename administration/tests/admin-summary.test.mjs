@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {Miniflare} from 'miniflare';
+test('management summary uses latest revisions, exact totals and owner isolation',async()=>{
+ const source=await readFile(new URL('../lib/admin-summary.mjs',import.meta.url),'utf8');const script=source.replace(/^export /gm,'')+`\nexport default {async fetch(req,env){try{return Response.json(await recommendationSummary(env.DB,new URL(req.url).searchParams.get('owner')));}catch{return new Response(null,{status:401});}}}`;
+ const mf=new Miniflare({modules:true,script,compatibilityDate:'2026-05-15',d1Databases:['DB']});try{const db=await mf.getD1Database('DB');const sql=await readFile(new URL('../drizzle/0002_cooing_omega_flight.sql',import.meta.url),'utf8');for(const s of sql.split('--> statement-breakpoint'))await db.prepare(s).run();
+ const add=async(id,owner)=>db.prepare('INSERT INTO recommendation_issues (id,owner_id,token_hash,issue_key,payload,created_at,expires_at) VALUES (?,?,?,?,?,?,?)').bind(id,owner,'hash',id,JSON.stringify({issue:id,researcher:owner,workbookUrl:'https://docs.google.com/spreadsheets/d/test/edit'}),'2026-11-17',9999999999999).run();
+ await add('a','owner-a');await add('b','owner-b');
+ const response=async(id,issue,revision,count,synced)=>db.prepare('INSERT INTO recommendation_responses (id,issue_id,revision,idempotency_key,payload,actor_id,submitted_at,synced_at) VALUES (?,?,?,?,?,?,?,?)').bind(id,issue,revision,id,JSON.stringify({selectedBookIds:Array.from({length:count},(_,i)=>'book'+i),profileChange:revision===2?'new interest':'',feedback:''}),'actor','2026-11-17T03:00:00Z',synced).run();
+ await response('a1','a',1,2,null);await response('a2','a',2,42,'2026-11-17T04:00:00Z');await response('b1','b',1,5,null);
+ const get=async owner=>(await mf.dispatchFetch('http://localhost/?owner='+owner)).json();const a=await get('owner-a');assert.equal(a.received,1);assert.equal(a.pending,0);assert.equal(a.recent[0].selectedCount,42);assert.equal(a.recent[0].hasProfileChange,true);assert.equal(a.recent[0].researcher,'owner-a');assert.equal((await get('owner-b')).pending,1);assert.deepEqual((await get('unknown')).recent,[]);assert.equal((await mf.dispatchFetch('http://localhost/')).status,401);
+ }finally{await mf.dispose();}
+});

@@ -1,0 +1,32 @@
+name: Check source
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  public-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/check-public-source.py
+  application:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [administration, checklist]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm run install:ci
+      - run: node --test tests/*.test.mjs
+      - run: npm exec tsc -- --noEmit
+      - run: npm run build
