@@ -4,6 +4,8 @@ For a Drive booklist plus a researcher name, apply SKILL.md’s standard researc
 
 ## Discover and screen
 
+There is no default selection-count ceiling. Review the complete relevant source pool; apply a quantity or budget limit only when the user explicitly supplies it. Per-request holdings limits and per-checklist page limits are batching constraints. Use continuation issues for a larger selected set, preserving stable book IDs, source coverage and each issue’s immutable numbering; never silently discard titles to fit a page.
+
 Read the live profile skill and relevant researcher profile. Keep the public research biography separate from researcher-supplied acquisition preferences. Record the exact bilingual profile summary and version used for each issue. Search Chinese, Japanese and Western-language publisher catalogs with multilingual names, topics and variants. Do not infer language competence from affiliation. Report coverage and genuine gaps without padding the list.
 
 Default to first publication in the current Asia/Taipei calendar year. Separate substantive new editions/translations, reissues and forthcoming titles. Verify author/editor, title, publisher, format ISBN, release date, language, contents and listed price when available. Copyright year alone does not establish release year. Distinguish direct from adjacent fit. Consolidate duplicate editions while preserving provenance.
