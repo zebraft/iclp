@@ -2,13 +2,7 @@
 
 # ICLP book recommendations
 
-## What it does
-
-Helps the ICLP library select books from publisher catalogs, match them to researchers’ interests, check existing holdings, and ask researchers which books they recommend purchasing. It records their choices for the buyer and keeps research profiles current when researchers request topic changes.
-
-## Purpose
-
-Actively suggest new books according to researcher interest and automatically process researcher selections.
+Actively suggests new books according to researchers’ interests and automatically processes their selections. It checks Academia Sinica holdings, collects choices through email or personal checklists, records recommendations for the buyer, and updates research profiles when researchers request changes.
 
 ## Tools
 
