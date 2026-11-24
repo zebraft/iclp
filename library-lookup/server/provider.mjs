@@ -1,4 +1,4 @@
-import { UserError, normalizeISBN } from './contracts.mjs';
+import { UserError, normalizeISBN, VERSION } from './contracts.mjs';
 import {sitesConfigured} from './sites-provider.mjs';
 import {cachedToken,invalidateToken} from './lookup-cache.mjs';
 import {upstreamOffset,uniqueRecords} from './pagination.mjs';
@@ -15,7 +15,7 @@ function query(input) {
 }
 export function status(env) {
   const mode=env.LIBRARY_MODE || (sitesConfigured(env)?'sites-bridge':'unconfigured');
-  return { version:'0.2.0', mode, sample:mode==='sample', libraryName:env.LIBRARY_NAME||null, symbol:env.LIBRARY_SYMBOL||(mode==='sites-bridge'?'DEMO':null),
+  return { version:VERSION, mode, sample:mode==='sample', libraryName:env.LIBRARY_NAME||null, symbol:env.LIBRARY_SYMBOL||(mode==='sites-bridge'?'DEMO':null),
     configured: mode==='sample'||(mode==='sites-bridge'&&sitesConfigured(env))||(mode==='oclc'&&!!env.OCLC_CLIENT_ID&&!!env.OCLC_CLIENT_SECRET&&!!env.LIBRARY_SYMBOL),
     publicAuthorizationDeclared: env.LIBRARY_PUBLIC_AUTHORIZED==='true', limits:{booksPerCheck:3,booksPerList:30,searchPageSize:10,maxOffset:200,maxProviderCallsPerTool:8},
     scope:'Configured library by default; WorldCat-wide discovery on explicit request, for all catalogued material types. Article indexing and journal issue coverage may be incomplete; catalogue holdings do not prove full-text access. No patron or purchasing access.' };

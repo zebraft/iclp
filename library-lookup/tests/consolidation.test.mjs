@@ -22,7 +22,7 @@ test('topic discovery retains recent and foundational records without a material
  assert.deepEqual(d.records.map(r=>r.year),['2024','1950','2024']);assert.deepEqual(d.records.map(r=>r.format),['Digital','PrintBook','Journal']);
 });
 test('worldwide pagination preserves scope without an ownership claim',async()=>{
- const d=await invoke('search_library_catalog',{query:'history',kind:'keyword',scope:'worldcat',offset:10},env,async(_u,o)=>{const p=JSON.parse(o.body);assert.equal(p.input.scope,'worldcat');assert.equal(p.input.offset,10);return Response.json({total:30,records:[record],nextOffset:20});});
+ const d=await invoke('search_library_catalog',{query:'history',kind:'keyword',scope:'worldcat',offset:10},env,async(_u,o)=>{const p=JSON.parse(o.body);assert.equal(p.input.scope,'worldcat');assert.equal(p.input.offset,11);return Response.json({total:30,records:[record],nextOffset:21});});
  assert.equal(d.scope,'worldcat');assert.equal(d.symbol,null);assert.equal(d.nextOffset,20);
 });
 test('matching identifiers retain explicit edition, format, volume and year warnings',async()=>{
