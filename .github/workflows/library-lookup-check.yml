@@ -1,0 +1,20 @@
+name: Check Library Lookup changes
+on:
+  pull_request:
+    paths:
+      - 'library-lookup/**'
+      - '.github/workflows/library-lookup-check.yml'
+permissions:
+  contents: read
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/check-public-source.py
+      - run: npm test
+        working-directory: library-lookup
+      - run: node -e "import('./library-lookup/dist/server/index.js').then(m=>{if(typeof m.default?.fetch!=='function')process.exit(1)})"

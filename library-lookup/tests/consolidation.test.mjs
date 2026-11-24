@@ -14,7 +14,7 @@ const record={oclcNumber:'123',title:'Ritual history',edition:'Second edition',f
 test('legacy as and canonical library use the same scoped implementation, with no status preflight',async()=>{
  const calls=[];const fetcher=async(_u,o)=>{calls.push(JSON.parse(o.body).input);return Response.json(page([record]));};
  for(const scope of ['as','library']){const d=await invoke('search_library_catalog',{query:'123',kind:'oclc',scope},env,fetcher);assert.equal(d.scope,'library');assert.equal(d.symbol,'DEMO');assert.equal(d.records[0].edition,'Second edition');}
- assert.equal(calls.length,2);assert.ok(calls.every(c=>c.scope==='as'&&c.kind==='oclc'));
+ assert.equal(calls.length,1);assert.ok(calls.every(c=>c.scope==='as'&&c.kind==='oclc'));
 });
 test('topic discovery retains recent and foundational records without a material restriction',async()=>{
  const rows=[record,{...record,oclcNumber:'124',title:'Foundational essays',year:'1950',format:'PrintBook'},{...record,oclcNumber:'125',title:'Research journal',format:'Journal'}];

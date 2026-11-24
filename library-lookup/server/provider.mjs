@@ -1,5 +1,7 @@
 import { UserError, normalizeISBN } from './contracts.mjs';
 import {sitesConfigured} from './sites-provider.mjs';
+import {cachedToken,invalidateToken} from './lookup-cache.mjs';
+import {upstreamOffset,uniqueRecords} from './pagination.mjs';
 const API = 'https://americas.discovery.api.oclc.org/worldcat/search/v2/';
 const TOKEN_URL = 'https://oauth.oclc.org/token';
 export const now = () => new Date().toISOString();
@@ -43,21 +45,21 @@ async function boundedJSON(response) {
   try{return JSON.parse(new TextDecoder().decode(bytes));}catch{deny('provider_response','The catalogue returned unreadable data.');}
 }
 export function createProvider(env, fetcher=fetch) {
-  checkedConfig(env);let calls=0, token=null,detailToken=null;const deadline=Date.now()+35000;
+  checkedConfig(env);let calls=0;const deadline=Date.now()+35000;
   const request=async(url,options)=>{
     if(++calls>8||Date.now()>=deadline) deny('budget_exceeded','This check reached its provider-call or time limit. Narrow the request.');
     try{return await fetcher(url,{...options,redirect:'manual',signal:AbortSignal.timeout(Math.min(12000,Math.max(1,deadline-Date.now())))});}catch{deny('provider_unavailable','The library provider could not be reached. Retry later. / 館藏服務暫時無法連線');}
   };
-  const auth=async(detail=false)=>{
-    if(detail?detailToken:token) return detail?detailToken:token;
-    const r=await request(TOKEN_URL,{method:'POST',headers:{Authorization:'Basic '+btoa(env.OCLC_CLIENT_ID+':'+env.OCLC_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded',Accept:'application/json'},body:new URLSearchParams({grant_type:'client_credentials',scope:detail?'wcapi:view_holdings':'wcapi:view_brief_bib wcapi:view_institution_holdings'})});
-    if(r.status!==200) deny('provider_auth','The library provider rejected the service credential or scope. Ask the maintainer.');
-    const d=await boundedJSON(r);if(typeof d.access_token!=='string'||!d.access_token) deny('provider_auth','The provider did not issue a usable access token.');
-    if(detail)detailToken=d.access_token;else token=d.access_token;return d.access_token;
-  };
+  const scopeFor=detail=>detail?'wcapi:view_holdings':'wcapi:view_brief_bib wcapi:view_institution_holdings';
+  const auth=detail=>cachedToken(env,fetcher,scopeFor(detail),async()=>{
+    const r=await request(TOKEN_URL,{method:'POST',headers:{Authorization:'Basic '+btoa(env.OCLC_CLIENT_ID+':'+env.OCLC_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded',Accept:'application/json'},body:new URLSearchParams({grant_type:'client_credentials',scope:scopeFor(detail)})});
+    if(r.status!==200)deny('provider_auth','The library provider rejected the service credential or scope. Ask the maintainer.');
+    const d=await boundedJSON(r);if(typeof d.access_token!=='string'||!d.access_token)deny('provider_auth','The provider did not issue a usable access token.');
+    return {token:d.access_token,expiresIn:d.expires_in};
+  });
   const get=async(path,params,detail=false)=>{
     const r=await request(API+path+'?'+new URLSearchParams(params),{headers:{Authorization:'Bearer '+await auth(detail),Accept:'application/json'}});
-    if(r.status===401||r.status===403) deny('permission_denied','The service credential cannot read this catalogue field. / 無此館藏讀取權限');
+    if(r.status===401||r.status===403){await invalidateToken(env,fetcher,scopeFor(detail));deny('permission_denied','The service credential cannot read this catalogue field. / 無此館藏讀取權限');}
     if(r.status===429) deny('provider_quota','The library provider quota is temporarily exhausted. Retry later.');
     if(r.status!==200) deny('provider_unavailable','The library provider did not complete the query. Retry later.');
     return boundedJSON(r);
@@ -65,14 +67,14 @@ export function createProvider(env, fetcher=fetch) {
   return {
     async search(input) {
       const scope=input.scope||'library',offset=input.offset||0;
-      const params={q:query(input),limit:'10',offset:String(offset),groupRelatedEditions:'false',groupVariantRecords:'false',enableSearchExpansion:'false'};
+      const params={q:query(input),limit:'10',offset:String(upstreamOffset(offset)),groupRelatedEditions:'false',groupVariantRecords:'false',enableSearchExpansion:'false'};
       if(scope==='library')params.heldBySymbol=env.LIBRARY_SYMBOL;
       const d=await get('brief-bibs',params);
       if(!Number.isInteger(d?.numberOfRecords)||d.numberOfRecords<0||!Array.isArray(d.briefRecords??(d.numberOfRecords===0?[]:null)))deny('provider_response','The catalogue returned an invalid search page.');
       const rows=d.briefRecords||[];
       if(rows.length>10||offset+rows.length>d.numberOfRecords||(offset<d.numberOfRecords&&!rows.length))deny('provider_response','The catalogue returned an inconsistent search page.');
-      const records=rows.map(b=>bib(b,env));
-      return {checkedAt:now(),scope,symbol:scope==='library'?env.LIBRARY_SYMBOL:null,libraryName:env.LIBRARY_NAME||env.LIBRARY_SYMBOL,query:input.query,total:d.numberOfRecords,offset,records,nextOffset:records.length&&offset+records.length<d.numberOfRecords&&offset+records.length<=200?offset+records.length:null,truncated:offset+records.length<d.numberOfRecords,coverageComplete:false,sample:false};
+      const records=uniqueRecords(rows.map(b=>bib(b,env)));
+      return {checkedAt:now(),scope,symbol:scope==='library'?env.LIBRARY_SYMBOL:null,libraryName:env.LIBRARY_NAME||env.LIBRARY_SYMBOL,query:input.query,total:d.numberOfRecords,offset,records,nextOffset:rows.length&&offset+rows.length<d.numberOfRecords&&offset+rows.length<=200?offset+rows.length:null,truncated:offset+rows.length<d.numberOfRecords,coverageComplete:false,sample:false};
     },
     async locations(id) {
       let d;
