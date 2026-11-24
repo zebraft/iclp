@@ -1,4 +1,5 @@
 import {UserError} from './contracts.mjs';
+import {upstreamOffset,bridgePage} from './pagination.mjs';
 const fail=(code,message)=>{throw new UserError(code,message);};
 export const sitesConfigured=env=>env.LIBRARY_READER_TRANSPORT==='test-gateway'?!!env.LIBRARY_TEST_GATEWAY_SECRET&&!!env.LIBRARY_TEST_GATEWAY_ORIGIN:!!env.LIBRARY_READER_SECRET&&!!env.LIBRARY_BACKEND_ACCESS&&!!env.LIBRARY_BACKEND_ORIGIN;
 export async function hmac(secret,value){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return [...new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(value)))].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -36,11 +37,12 @@ export function createSitesProvider(env,fetcher=fetch,req=null){
  const safeURL=v=>{try{const u=new URL(v);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null;}catch{return null;}};
  return {
   async search(input){
-   const scope=input.scope||'library';const d=await send({action:'search',input:{query:input.query,kind:input.kind||'title',offset:input.offset||0,scope:scope==='library'?'as':'worldcat'}});
+   const scope=input.scope||'library';if((input.offset||0)>=200)fail('pagination_limit','The bridge page limit was reached. Refine the query; more records may exist.');const d=await send({action:'search',input:{query:input.query,kind:input.kind||'title',offset:upstreamOffset(input.offset||0),scope:scope==='library'?'as':'worldcat'}});
    if(!Array.isArray(d.records)||d.records.length>10||!Number.isInteger(d.total)||d.total<0||d.records.some(r=>!/^\d{1,20}$/.test(r.oclcNumber)||typeof r.title!=='string'))fail('provider_response','The library service returned an invalid search page.');
-   const records=d.records.map(r=>({oclcNumber:r.oclcNumber,title:text(r.title),author:text(r.author),year:text(r.year),publisher:text(r.publisher),format:text(r.format),edition:text(r.edition),isbns:Array.isArray(r.isbns)?r.isbns.filter(v=>typeof v==='string').slice(0,30):[],catalogUrl:safeURL(r.catalogUrl)}));
-   const next=Number.isInteger(d.nextOffset)&&d.nextOffset>(input.offset||0)&&d.nextOffset<=200?d.nextOffset:null;
-   return {checkedAt:text(d.checkedAt),scope,symbol:scope==='library'?'DEMO':null,libraryName:env.LIBRARY_NAME||'Configured DEMO library',query:input.query,total:d.total,offset:input.offset||0,records,nextOffset:next,truncated:(input.offset||0)+records.length<d.total,coverageComplete:false,sample:false};
+   const page=bridgePage(d,input.offset||0);
+   const records=page.records.map(r=>({oclcNumber:r.oclcNumber,title:text(r.title),author:text(r.author),year:text(r.year),publisher:text(r.publisher),format:text(r.format),edition:text(r.edition),isbns:Array.isArray(r.isbns)?r.isbns.filter(v=>typeof v==='string').slice(0,30):[],catalogUrl:safeURL(r.catalogUrl)}));
+   const next=page.nextOffset;
+   return {checkedAt:text(d.checkedAt),scope,symbol:scope==='library'?'DEMO':null,libraryName:env.LIBRARY_NAME||'Configured DEMO library',query:input.query,total:d.total,offset:input.offset||0,records,nextOffset:next,truncated:page.truncated,coverageComplete:false,sample:false};
   },
   async locations(oclcNumber){
    const d=await send({action:'holdings',oclcNumber});

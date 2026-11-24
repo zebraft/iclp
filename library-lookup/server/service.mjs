@@ -3,6 +3,7 @@ import { createProvider, status } from './provider.mjs';
 import { sampleProvider } from './sample.mjs';
 import {assessSerialCoverage} from './serial-coverage.mjs';
 import {createSitesProvider} from './sites-provider.mjs';
+import {cachedProvider} from './lookup-cache.mjs';
 const cleanBook = b => Object.fromEntries(Object.entries(b).filter(([k])=>['id','title','author','isbn','oclcNumber','year','publisher','edition','format','volume','rationale'].includes(k)));
 export const safeError = error => ({code:error instanceof UserError?error.code:'internal_error',message:error instanceof UserError?error.message:'The library request failed. Retry later or contact the service maintainer. / 查詢失敗，請稍後重試',retryable:['provider_unavailable','provider_quota','internal_error'].includes(error?.code)});
 export function csvExport(books,ids) {
@@ -21,7 +22,8 @@ export async function invoke(name,args,env={},fetcher=fetch,req=null) {
  if(name==='prepare_book_list')return {books:normalizeBooks(args.books),holdingsChecked:false,persisted:false};
  if(name==='export_selection')return csvExport(normalizeBooks(args.books),args.selectedIds);
  const mode=status(env).mode;
- const provider=mode==='sample'?sampleProvider():mode==='sites-bridge'?createSitesProvider(env,fetcher,req):createProvider(env,fetcher);
+ const rawProvider=mode==='sample'?sampleProvider():mode==='sites-bridge'?createSitesProvider(env,fetcher,req):createProvider(env,fetcher);
+ const provider=mode==='sample'?rawProvider:await cachedProvider(rawProvider,env,fetcher);
  if(name==='search_articles'){
   const scope=args.scope||'library';
   const articleSearch=await provider.search({query:args.query,kind:args.kind||'title',scope,offset:args.offset||0});
@@ -33,16 +35,22 @@ export async function invoke(name,args,env={},fetcher=fetch,req=null) {
   return {scope,articleSearch,hostJournalSearch,hostJournalError,articleIdentityVerified:false,issueCoverageVerified:false,fullTextAccessVerified:false,coverageComplete:false,
    message:'Catalogue candidates only; records may describe articles, journals or other materials. Verify the article citation and host journal separately. Journal holdings alone do not establish access to a particular article or issue. No results do not establish absence from article indexes.'};
  }
- if(name==='search_library_catalog')return provider.search(args);
+ if(name==='search_library_catalog'){
+  const page=await provider.search(args,{refresh:args.refresh});
+  if(!args.includeLocations)return page;
+  const records=[...new Map(page.records.map(r=>[r.oclcNumber,r])).values()].slice(0,args.locationLimit??1);
+  const locationResults=await Promise.all(records.map(async r=>{try{return {oclcNumber:r.oclcNumber,...await provider.locations(r.oclcNumber,{refresh:args.refresh})};}catch(e){return {oclcNumber:r.oclcNumber,detailSupported:false,status:'unable_to_verify',error:safeError(e)};}}));
+  return {...page,locationResults,locationsTruncated:records.length<page.records.length};
+ }
  if(name==='get_library_locations'){
-  const result=await provider.locations(args.oclcNumber);
+  const result=await provider.locations(args.oclcNumber,{refresh:args.refresh});
   return args.citationYear?{...result,serialCoverage:assessSerialCoverage(result.holdings||[],args.citationYear)}:result;
  }
  const books=normalizeBooks(args.books),results=[];
  for(const b of books) {
   const q=b.oclcNumber||b.isbn||b.title,kind=b.oclcNumber?'oclc':b.isbn?'isbn':'title';
   try {
-   const page=await provider.search({query:q,kind,scope:'library',offset:0});
+   const page=await provider.search({query:q,kind,scope:'library',offset:0},{refresh:args.refresh});
    const isbnMatches=r=>!!b.isbn&&r.isbns.some(isbn=>{try{return normalizeISBN(isbn)===b.isbn;}catch{return false;}});
    const matching=page.records.filter(r=>(b.oclcNumber||b.isbn)&&(!b.oclcNumber||r.oclcNumber===b.oclcNumber)&&(!b.isbn||isbnMatches(r)));
    const normalize=s=>s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
