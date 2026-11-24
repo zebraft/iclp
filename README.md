@@ -1,15 +1,19 @@
 ---written by AI---
 
-# ICLP book recommendations
+# ICLP library tools
 
-Actively suggests new books according to researchers’ interests and automatically processes their selections. It checks Academia Sinica holdings, collects choices through email or personal checklists, records recommendations for the buyer, and updates research profiles when researchers request changes.
+Tools for academic discovery and library acquisitions: actively suggest new books according to researchers’ interests and automatically process their selections.
 
-## Tools
+## Applications
 
-- **ChatGPT buy-books skill:** guides selection and reply processing.
-- **MCP tools and WorldCat Search API:** check bibliographic records and Academia Sinica holdings.
-- **Google Sheets and Apps Script:** maintain the staff register, synchronize selections, and manage the buyer queue.
-- **Gmail:** send recommendations and receive replies.
-- **Web apps:** provide private staff administration and personal checklists for researchers.
+- **[Library Lookup](library-lookup/):** search books and article candidates, check holdings and locations, compare bibliographies, and export selections.
+- **[Book recommendations](skills/buy-books/):** select relevant new books, collect researcher choices through email or a [personal checklist](checklist/), record recommendations for the buyer, and update research interests.
+- **[Staff administration](administration/):** manage the shared catalog connection, researcher responses, workbook delivery, and pending submissions.
 
-The separate [Library Lookup plugin](library-lookup/) provides conversational catalog searches, holdings checks, bibliography comparison, and CSV export.
+## Tools used
+
+- **OCLC WorldCat Search API v2:** bibliographic searches and holdings checks.
+- **ChatGPT skills and MCP tools:** conversational discovery, selection, and reply processing.
+- **Google Sheets and Apps Script:** staff records, buyer queue, and selection synchronization.
+- **Gmail:** recommendation emails and replies.
+- **Web apps:** researcher checklists and private staff administration.

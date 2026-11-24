@@ -13,3 +13,5 @@ Update Apps Script source through administration/google-workspace/apps-script/Br
 Keep skill source under skills/. Updating a cloud-installed skill requires a separate authorized import/update; writing a repository file does not update ChatGPT automatically.
 
 Keep the retired Book Browser experiment and its dataset outside this repository. Preserve existing vendor license notices. Runtime deployment identities belong in ignored private settings, not this public snapshot.
+
+Keep the repository-root README.md as the single brief human overview of purpose, applications and tools. Do not add per-folder READMEs or setup/build instructions there; keep technical guidance in source, tests and AGENTS.md files.

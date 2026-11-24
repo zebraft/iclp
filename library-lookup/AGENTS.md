@@ -8,4 +8,4 @@ The bridge's DEMO institution symbol, MAIN branch code, and placeholder hosts ar
 
 Run npm test in this directory and python scripts/check-public-source.py from the repository root. Regenerate build output with npm run build; do not commit dist or server/*-generated.mjs. Keep real configuration in ignored runtime settings.
 
-Keep README.md as a short description of purpose, behavior and tools. Put technical detail in code or agent instructions.
+Use the repository-root README.md as the human overview; do not add a per-folder README. Put technical detail in code, tests or agent instructions.
