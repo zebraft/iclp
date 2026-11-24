@@ -2,31 +2,18 @@
 
 # ICLP book recommendations
 
-Select books from a supplied catalog, match them to researcher interests, check Academia Sinica holdings, and collect purchase recommendations.
+## What it does
 
-## Workflow
+Helps the ICLP library select books from publisher catalogs, match them to researchers’ interests, check existing holdings, and ask researchers which books they recommend purchasing. It records their choices for the buyer and keeps research profiles current when researchers request topic changes.
 
-1. Read the catalog and the researcher’s **Research Areas** master profile.
-2. Select relevant books, exclude confirmed holdings, and flag uncertain results for staff review.
-3. Save a numbered issue in one private staff workbook and create a personal checklist.
-4. Send the checklist when email delivery is authorized. Submitted choices sync to the workbook and deduplicated buyer queue.
-5. Apply explicit topic changes to both Research Areas and the private preference record, in Chinese and English. Preserve history and verify both updates.
+## Purpose
 
-Recommendations are not purchase orders. Holdings and outstanding orders require review before purchase.
+Reduce repetitive selection, checking, and correspondence while keeping researchers and library staff in control of purchasing decisions.
 
-## Source
+## Tools
 
-- `administration/`: authenticated staff tools, holdings checks, and response storage.
-- `checklist/`: personal book-confirmation webpage.
-- `administration/google-workspace/apps-script/`: workbook connection and delivery retries.
-- `skills/buy-books/`: agent workflow instructions.
-
-## Setup and maintenance
-
-Replace the `.invalid` origins, workbook placeholder, and profile references with your private configuration. Keep credentials, researcher data, personal links, and operational records outside this public repository.
-
-For each app, run `npm run install:ci`, `node --test tests/*.test.mjs`, `npm exec tsc -- --noEmit`, and `npm run build`. After Apps Script changes, regenerate its download with `node scripts/bundle-apps-script.mjs` from `administration/`.
-
-Before committing, run `python scripts/check-public-source.py` and relevant checks. See [AGENTS.md](AGENTS.md) for maintenance rules.
-
-This repository does not automatically synchronize with deployed Sites, Google Apps Script, or installed ChatGPT skills. Update each destination explicitly.
+- **ChatGPT buy-books skill:** guides selection and reply processing.
+- **MCP tools and WorldCat Search API:** check bibliographic records and Academia Sinica holdings.
+- **Google Sheets and Apps Script:** maintain the staff register, synchronize selections, and manage the buyer queue.
+- **Gmail:** send recommendations and receive replies.
+- **Web apps:** provide private staff administration and personal checklists for researchers.
