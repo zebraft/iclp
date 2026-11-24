@@ -8,7 +8,7 @@ Helps the ICLP library select books from publisher catalogs, match them to resea
 
 ## Purpose
 
-Reduce repetitive selection, checking, and correspondence while keeping researchers and library staff in control of purchasing decisions.
+Actively suggest new books according to researcher interest and automatically process researcher selections.
 
 ## Tools
 
