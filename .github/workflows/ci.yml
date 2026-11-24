@@ -28,3 +28,14 @@ jobs:
       - run: node --test tests/*.test.mjs
       - run: npm exec tsc -- --noEmit
       - run: npm run build
+  library-lookup:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: library-lookup
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm test

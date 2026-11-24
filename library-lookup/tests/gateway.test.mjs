@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {withTestGateway} from '../server/test-gateway.mjs';
+import {createSitesProvider,hmac} from '../server/sites-provider.mjs';
+const secret='synthetic-gateway-secret';
+const body={action:'search',input:{query:'Test',kind:'title',scope:'as'},caller:'a'.repeat(64)};
+async function signed(payload=body,stamp=String(Date.now())){const raw=JSON.stringify(payload);return new Request('https://reader-placeholder.chatgpt.site/api/library-test-reader',{method:'POST',headers:{'Content-Type':'application/json','x-library-time':stamp,'x-library-signature':await hmac(secret,stamp+'\n'+raw)},body:raw});}
+test('additive gateway leaves every existing route untouched',async()=>{let seen;const original={fetch:async req=>{seen=req.url;return new Response('original');}};const app=withTestGateway(original,()=>{throw Error('should not run');});for(const path of ['/','/mcp','/test','/other']){const r=await app.fetch(new Request('https://reader-placeholder.chatgpt.site'+path),{});assert.equal(await r.text(),'original');assert.ok(seen.endsWith(path));}});
+test('gateway rejects missing secret, tampering and stale authentication before invoking',async()=>{let calls=0;const app=withTestGateway({},()=>{calls++;});assert.equal((await app.fetch(await signed(),{})).status,503);assert.equal((await app.fetch(await signed(body,'1000000000000'),{LIBRARY_TEST_GATEWAY_SECRET:secret})).status,401);assert.equal((await app.fetch(await signed(),{LIBRARY_TEST_GATEWAY_SECRET:'different'})).status,401);assert.equal(calls,0);});
+test('gateway forwards only the original two reader operations',async()=>{let name,args;const app=withTestGateway({},async(_req,_env,n,a)=>{name=n;args=a;return {ok:true};});const env={LIBRARY_TEST_GATEWAY_SECRET:secret};assert.equal((await app.fetch(await signed(),env)).status,200);assert.equal(name,'search_library_catalog');assert.equal(args.query,'Test');assert.equal((await app.fetch(await signed({action:'holdings',oclcNumber:'123',caller:body.caller}),env)).status,200);assert.equal(name,'get_library_locations');assert.equal((await app.fetch(await signed({action:'purchase',caller:body.caller}),env)).status,400);});
+test('test provider talks to signed narrow gateway without bearer/API key forwarding',async()=>{let request;const provider=createSitesProvider({LIBRARY_READER_TRANSPORT:'test-gateway',LIBRARY_TEST_GATEWAY_SECRET:secret,LIBRARY_TEST_GATEWAY_ORIGIN:'https://reader-placeholder.chatgpt.site'},async(url,options)=>{request={url,options};return Response.json({checkedAt:'now',total:0,records:[],nextOffset:null});});await provider.search({query:'Test'});assert.ok(request.url.endsWith('/api/library-test-reader'));assert.equal(request.options.headers.Authorization,undefined);assert.equal(request.options.headers['OAI-Sites-Authorization'],undefined);assert.match(request.options.headers['x-library-signature'],/^[a-f0-9]{64}$/);});
+test('gateway preserves quota/permission distinctions without leaking upstream messages',async()=>{
+ for(const [code,status] of [['provider_quota',429],['permission_denied',403]]){
+  const app=withTestGateway({},async()=>{throw Object.assign(Error('PRIVATE-UPSTREAM-DETAIL'),{code});});
+  const r=await app.fetch(await signed(),{LIBRARY_TEST_GATEWAY_SECRET:secret});assert.equal(r.status,status);assert.ok(!(await r.text()).includes('PRIVATE-UPSTREAM-DETAIL'));
+ }
+});

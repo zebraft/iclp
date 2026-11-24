@@ -1,0 +1,13 @@
+{
+  "name": "library-selection-workbench",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs established",
+    "test": "node scripts/build.mjs established && node --test tests/*.test.mjs"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "library-lookup",
+  "version": "1.0.1",
+  "description": "Search academic records and library holdings; compare book lists and export selections.",
+  "author": {
+    "name": "Plugin author"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Library Lookup",
+        "shortDescription": "Library records and holdings",
+        "longDescription": "Search academic records and public holdings, compare bibliographies, and export selected records.",
+        "developerName": "Plugin author",
+        "category": "Other",
+        "capabilities": [],
+        "defaultPrompt": null
+      }
+    }
+  }
+}

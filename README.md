@@ -11,3 +11,5 @@ Actively suggests new books according to researchers’ interests and automatica
 - **Google Sheets and Apps Script:** maintain the staff register, synchronize selections, and manage the buyer queue.
 - **Gmail:** send recommendations and receive replies.
 - **Web apps:** provide private staff administration and personal checklists for researchers.
+
+The separate [Library Lookup plugin](library-lookup/) provides conversational catalog searches, holdings checks, bibliography comparison, and CSV export.

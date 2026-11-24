@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Quota,admit} from '../server/quota.mjs';
+function fixture(){const map=new Map();let alarm=null;const storage={get:async k=>map.get(k),put:async(k,v)=>map.set(k,v),delete:async k=>map.delete(k),list:async()=>new Map(map),getAlarm:async()=>alarm,setAlarm:async v=>{alarm=v;},transaction:async fn=>fn(storage)};return {map,storage,quota:new Quota({storage})};}
+const call=(quota,caller)=>quota.fetch(new Request('https://quota.invalid',{method:'POST',body:JSON.stringify({caller})}));
+test('per-caller minute limit and service daily cap are enforced',async()=>{const {quota}=fixture();for(let i=0;i<20;i++)assert.equal((await call(quota,'a'.repeat(64))).status,204);assert.equal((await call(quota,'a'.repeat(64))).status,429);for(let i=0;i<180;i++)assert.equal((await call(quota,i.toString(16).padStart(64,'0'))).status,204);assert.equal((await call(quota,'b'.repeat(64))).status,429);});
+test('quota cannot be incremented with a raw identity',async()=>{const {quota,map}=fixture();assert.equal((await call(quota,'raw-person')).status,400);assert.equal(map.size,0);});
+test('edge identity is HMAC hashed with a daily salt, never forwarded as IP',async()=>{let payload;const limits={idFromName:()=>1,get:()=>({fetch:async req=>{payload=await req.json();return new Response(null,{status:204});}})};const req=new Request('https://test.invalid',{headers:{'CF-Connecting-IP':'192.0.2.123'}});assert.equal((await admit(req,{LIMITS:limits,RATE_HASH_SECRET:'test-secret'})).ok,true);assert.match(payload.caller,/^[0-9a-f]{64}$/);assert.ok(!JSON.stringify(payload).includes('192.0.2.123'));});
+test('expired quota buckets are removed on alarm',async()=>{const {quota,map}=fixture();map.set('day:0',1);map.set('minute:0:'+('a'.repeat(64)),1);await quota.alarm();assert.equal(map.size,0);});
